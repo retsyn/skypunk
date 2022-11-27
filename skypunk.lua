@@ -6,9 +6,18 @@
 -- version: 0.1
 -- script:  lua
 
+-- lua table-size util
+function len(table)
+	size = 0
+	for _ in pairs(table) do
+		size = size + 1
+	end
+	return size
+end
+
 -- Entity master table and class
 ents = {}
-function ents:new(type, mind, newx, newy)
+function ents:new(type, mind, newsprite, newx, newy)
 
 	-- Fresh ent table; basic stats
 	ent = {
@@ -27,26 +36,49 @@ function ents:new(type, mind, newx, newy)
 	-- Functions that work on all ents:
 	function ent:animate()
 		-- Iterate the ticker to see if it's time to advance a frame.
-		this.tick = this.tick + 1
-		if(this.tick >= animspeed) then
+		self.tick = self.tick + 1
+		if(self.tick >= self.animspeed) then
 			-- If it's time to advance a frame, 'animframe' goes up by 1.
-			this.animframe = this.animframe + 1
-			this.tick = 0
+			self.animframe = self.animframe + 1
+			self.tick = 0
 			-- the playframes table has a list of offsets, found with animframe.
-			this.drawframe = sprite + this.playframe[animframe]
+			-- First make sure we haven't counted past the last frame:
+			if(self.animframe > len(self.playframes)) then
+				self.animframe = 1
+			end
+			-- If the animframe is witin bounds, set which frame to draw
+			self.drawframe = self.sprite + self.playframes[self.animframe]
 			-- If we pull 'nil' from the playframe list, then it's ran out.
-			if(this.drawframe == nil) then
+			if(self.drawframe == nil) then
 				-- If the play frame list has ran out, we move ahead.
-				this.animframe = 1
-				this.drawframe = sprite + this.playframe[animframe]
+				self.animframe = 1
+				self.drawframe = self.sprite + self.playframes[self.animframe]
 			end
 		end
 	end
-	table.insert(this, ent) -- Put this new ent in the ents list.
+	function ent:draw()
+		-- Render the sprite with the Consoles draw command.
+		-- Tic80 syntax
+		spr(self.drawframe, self.x, self.y, 2, 2)
+	end
+	table.insert(self, ent) -- Put self new ent in the ents list.
 end
+
+
+function init()
+	-- make a player in the ent table:
+	ents:new(0, 0, 0, 20, 20)
+end
+
+print("Initializing!", 10, 10, 15)
+init()
 
 function TIC()
 
+	for i, e in ipairs(ents) do
+		ents[i]:animate()
+		ents[i]:draw()
+	end
 end
 
 -- <TILES>
