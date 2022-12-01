@@ -19,6 +19,36 @@ minds = {
 	player = 0,
 }
 
+-- MATH FUNCS for aiming bullets
+-- Find the line vector between two objects.
+function GetVector(x1, y1, x2, y2)
+	lx = (x2 - x1)
+	ly = (y2 - y1)
+	return {lx, ly}
+end
+
+-- Find the magnitude of a vector (So we can normalize it later for shot angles)
+function Magnitude(x, y)
+	magnitude = math.sqrt((x^2) + (y^2))
+	return magnitude -- Pop pop.
+end
+
+-- A full line between two objects is reduced to a "pixel length" x,y vector,
+-- which can be multiplied by the speed of the projectile.
+function NormalizeVector(x, y)
+	mag = Magnitude(x, y)
+	normx = x / mag
+	normy = y / mag
+	return {normx, normy}
+end
+
+-- Calculates shot velocities for any aim using the above functions.
+function AimShot(x1, y1, x2, y2, speed)
+	line_vec = GetVector(x1, y1, x2, y2) -- Line between shooter and target.
+	norm_vec = NormalizeVector(line_vec[1], line_vec[2]) -- shorten this line to a 'unit'
+	return {norm_vec[1] * speed, norm_vec[2] * speed} -- multiple the unit by desired speed.
+end
+
 -- lua table-size util
 function Len(table)
 	local size = 0
@@ -32,7 +62,6 @@ end
 Animation_data = {
 	skypunk = {{0}, {1}, {2}}, -- straight, up, down
 }
-
 
 function Diminish(float, factor)
 	-- function to move towards zero by a given factor, but not past it.  Good for friction.
@@ -62,8 +91,26 @@ function projs:new(newsprite, newx, newy, new_x_vel, new_y_vel, new_flash)
 		y = newy,
 		x_vel = new_x_vel,
 		y_vel = new_y_vel,
-		flash = new_flash
+		flash = new_flash,
+		frame = 0,
+		tick = 0
 	}
+
+	function new_proj:move()
+		self.x = self.x + self.x_vel
+		self.y = self.y + self.y_vel
+	end
+
+	function new_proj:draw()
+		spr(self.sprite + self.frame, self.x, self.y, nil, 1, nil, nil, 1, 1)
+		if(self.flash) then
+			self.tick = self.tick + 1
+			if(self.tick >= 5) then
+				if(self.frame == 0) then self.frame = 1 else self.frame = 0 end
+				self.tick = 0
+			end
+		end
+	end
 
 	table.insert(self, new_proj)
 end
@@ -211,14 +258,30 @@ end
 function init()
 	-- make a player in the ent table:
 	ents:new(entity_ids.skypunk, 2, minds.player, 20, 30, Animation_data.skypunk)
+	vel = AimShot(60, 30, ents[1].x, ents[1].y, 0.1)
+	projs:new(entity_ids.enemy_bullet, 60, 60, vel[1], vel[2], true)
+
+	vel = AimShot(30, 60, ents[1].x, ents[1].y, 0.1)
+	projs:new(entity_ids.enemy_bullet, 60, 60, vel[1], vel[2], true)
+
+	vel = AimShot(50, 80, ents[1].x, ents[1].y, 0.1)
+	projs:new(entity_ids.enemy_bullet, 60, 60, vel[1], vel[2], true)
+
 end
 
 
 init()
+shottick = 0
 
 function TIC()
 	-- clear the screen
 	cls(10)
+	shottick = shottick + 1
+	if(shottick >= 10) then
+		vel = AimShot(50, 80, ents[1].x + 8, ents[1].y + 8, 1.3)
+		projs:new(entity_ids.enemy_bullet, 60, 60, vel[1], vel[2], true)
+		shottick = 0
+	end
 
 	for i, e in ipairs(ents) do
 		ents[i]:think()
@@ -226,6 +289,11 @@ function TIC()
 		ents[i]:act()
 		ents[i]:phys()
 		ents[i]:draw()
+	end
+
+	for i, e in ipairs(projs) do
+		projs[i]:move()
+		projs[i]:draw()
 	end
 end
 
