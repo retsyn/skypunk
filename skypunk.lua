@@ -102,7 +102,7 @@ function projs:new(newsprite, newx, newy, new_x_vel, new_y_vel, new_flash)
 	end
 
 	function new_proj:draw()
-		spr(self.sprite + self.frame, self.x, self.y, nil, 1, nil, nil, 1, 1)
+		spr(self.sprite + self.frame, self.x-4, self.y-4, nil, 1, nil, nil, 1, 1)
 		if(self.flash) then
 			self.tick = self.tick + 1
 			if(self.tick >= 5) then
@@ -241,14 +241,14 @@ function ents:new(newsprite, newsize, newmind, newx, newy, new_anims)
 		-- Apply friction.
 		self.x_vel = Diminish(self.x_vel, self.airfriction)
 		self.y_vel = Diminish(self.y_vel, self.airfriction)
-
+ 
 	end
 
 
 	function ent:draw()
 		-- Render the sprite with the Consoles draw command.
 		-- Tic80 syntax
-		spr(self.drawframe, self.x, self.y, nil, 1, nil, nil, self.size, self.size)
+		spr(self.drawframe, self.x-8, self.y-8, nil, 1, nil, nil, self.size, self.size)
 
 	end
 	table.insert(self, ent) -- Put self new ent in the ents list.
@@ -257,15 +257,7 @@ end
 
 function init()
 	-- make a player in the ent table:
-	ents:new(entity_ids.skypunk, 2, minds.player, 20, 30, Animation_data.skypunk)
-	vel = AimShot(60, 30, ents[1].x, ents[1].y, 0.1)
-	projs:new(entity_ids.enemy_bullet, 60, 60, vel[1], vel[2], true)
-
-	vel = AimShot(30, 60, ents[1].x, ents[1].y, 0.1)
-	projs:new(entity_ids.enemy_bullet, 60, 60, vel[1], vel[2], true)
-
-	vel = AimShot(50, 80, ents[1].x, ents[1].y, 0.1)
-	projs:new(entity_ids.enemy_bullet, 60, 60, vel[1], vel[2], true)
+	ents:new(entity_ids.skypunk, 2, minds.player, 0, 0, Animation_data.skypunk)
 
 end
 
@@ -278,7 +270,7 @@ function TIC()
 	cls(10)
 	shottick = shottick + 1
 	if(shottick >= 10) then
-		vel = AimShot(50, 80, ents[1].x + 8, ents[1].y + 8, 1.3)
+		vel = AimShot(60, 60, ents[1].x, ents[1].y, 1.3)
 		projs:new(entity_ids.enemy_bullet, 60, 60, vel[1], vel[2], true)
 		shottick = 0
 	end
