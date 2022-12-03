@@ -8,15 +8,25 @@
 -- input: gamepad
 
 -- enumerated constants:
-entity_ids = {
+sprite_ids = {
 	skypunk = 256,
+	ratboy = 288,
 
+	explo = 368,
 	enemy_bullet = 384,
 	player_bullet = 386,
 }
 
+screen_limit = {
+	left = 0,
+	top = 0,
+	bottom = 136,
+	right = 240
+}
+
 minds = {
 	player = 0,
+	ratboy = 1,
 }
 
 -- MATH FUNCS for aiming bullets
@@ -61,6 +71,8 @@ end
 -- Animation data for each object:
 Animation_data = {
 	skypunk = {{0}, {1}, {2}}, -- straight, up, down
+	explode = {{0, 1, 2, 3, 4, 5, 6, 7, 8}},
+	ratboy = {{0}} -- just static?
 }
 
 function Diminish(float, factor)
@@ -93,12 +105,21 @@ function projs:new(newsprite, newx, newy, new_x_vel, new_y_vel, new_flash)
 		y_vel = new_y_vel,
 		flash = new_flash,
 		frame = 0,
-		tick = 0
+		tick = 0,
+		alive = true,
 	}
 
 	function new_proj:move()
 		self.x = self.x + self.x_vel
 		self.y = self.y + self.y_vel
+		-- We add four pixels to the screen limit to give room to scroll off.
+		if(self.x > screen_limit.right + 4 or self.x < -4) then 
+			self.alive = false 
+		end
+		if(self.y > screen_limit.bottom + 4 or self.y < -4) then
+			self.alive = false
+		end
+
 	end
 
 	function new_proj:draw()
@@ -151,8 +172,12 @@ function ents:new(newsprite, newsize, newmind, newx, newy, new_anims)
 			attack=false,
 			dodge=false,
 			special=false,
-		} -- impulses are "intentions" of an entity, whether from ai 
+		}, -- impulses are "intentions" of an entity, whether from ai 
 		-- or player's controller input.
+
+		-- Game mechanic stuff
+		destroyable = true, -- if truly deleting this is allowed, as in not a player.
+		alive = true, -- if not true, queue for deletion.
 	}
 
 	-- Functions that work on all ents:
@@ -173,7 +198,7 @@ function ents:new(newsprite, newsize, newmind, newx, newy, new_anims)
 		end
 
 		-- how we animate the player.
-		if(self.sprite == entity_ids.skypunk) then
+		if(self.sprite == sprite_ids.skypunk) then
 			if(self.impulses.up == true and self.impulses.down == false) then
 				self.anim_reel = 3
 				self.tick = self.animspeed
@@ -257,7 +282,15 @@ end
 
 function init()
 	-- make a player in the ent table:
-	ents:new(entity_ids.skypunk, 2, minds.player, 0, 0, Animation_data.skypunk)
+	ents:new(sprite_ids.skypunk, 2, minds.player, 0, 0, Animation_data.skypunk)
+	ents[1].destroyable = false -- Mark player as not delete-able
+
+
+	-- TEMP STUFF
+	-- make some ratboys
+	ents:new(sprite_ids.ratboy, 2, minds.ratboy, 120, 20, Animation_data.ratboy)
+	ents:new(sprite_ids.ratboy, 2, minds.ratboy, 160, 30, Animation_data.ratboy)
+	ents:new(sprite_ids.ratboy, 2, minds.ratboy, 175, 10, Animation_data.ratboy)
 
 end
 
@@ -271,7 +304,7 @@ function TIC()
 	shottick = shottick + 1
 	if(shottick >= 10) then
 		vel = AimShot(60, 60, ents[1].x, ents[1].y, 1.3)
-		projs:new(entity_ids.enemy_bullet, 60, 60, vel[1], vel[2], true)
+		projs:new(sprite_ids.enemy_bullet, 60, 60, vel[1], vel[2], true)
 		shottick = 0
 	end
 
@@ -281,12 +314,16 @@ function TIC()
 		ents[i]:act()
 		ents[i]:phys()
 		ents[i]:draw()
+		if(ents[i].alive == false) then table.remove(ents, i) end
 	end
 
 	for i, e in ipairs(projs) do
 		projs[i]:move()
 		projs[i]:draw()
+		if(projs[i].alive == false) then table.remove(projs, i) end
 	end
+
+	print(Len(projs), 10, 10)
 end
 
 -- <TILES>
@@ -313,6 +350,19 @@ end
 -- 019:3223600f666666dd555576085555670855557008555f0000ffff000000000000
 -- 020:6776067777776777066666660007767700000777000000000000000000000000
 -- 021:7777600f777756dd66666608feef6708fccf7008fccf0000ffff000000000000
+-- 032:00000000000000ed000000dd000000dd000000ed0000000e0220000022220000
+-- 033:00000000de000000dd00000042cc000042cf0000dddddf00dddde00fedde000f
+-- 048:2222022233322333022222220001121100000111000000000000000000000000
+-- 049:2222200f333332dd222222081111210811111008fccf0000fccf0000ffff0000
+-- 112:000000000000000000033000003cc300003cc300000330000000000000000000
+-- 113:000000000033330003cccc300cccccc00cccccc0033cc3300003300000000000
+-- 114:004444004cccccc4cccccccccccccccccccccccc4cccccc44c4cc4c400044000
+-- 115:0044440034cccc434cccccc44cc44cc44cccccc44c4cc4c43434434300033000
+-- 116:00333300334cc433344444433c4444c3343443433333333333eeee33000ee000
+-- 117:01222210122222211222222112122121e1e11e1e0eeeeee0000ee00000000000
+-- 118:0111111011111111e1e11e1eeee11eeeffefefff0ffffff0000ff00000000000
+-- 119:0f0ff0f0ffffffff0f0ffff00000000000000000000000000000000000000000
+-- 120:0f0ff0f000000000000000000000000000000000000000000000000000000000
 -- 128:000000000005500000544500054cc450054cc450005445000005500000000000
 -- 129:0000000000044000004cc40004c55c4004c55c40004cc4000004400000000000
 -- 130:0000000000000000001044401020cccc1020cccc001044400000000000000000
