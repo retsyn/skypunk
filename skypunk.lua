@@ -157,6 +157,8 @@ function ents:new(newsprite, newsize, newmind, newx, newy, new_anims)
 		animspeed = 20, -- Frames in engine until animation next frame
 		x = newx, -- X screen location
 		y = newy, -- Y screen location
+		ai_tick = 0, -- Arbitrary AI ticker, different uses for different cases.
+		ai_tick2 = 0,
 
 		-- Physics stuff
 		x_vel = 0.0, -- horizontal velocity
@@ -232,6 +234,20 @@ function ents:new(newsprite, newsize, newmind, newx, newy, new_anims)
 			self.impulses.dodge = btnp(5)
 			self.impulses.special = btnp(6)
 		end
+
+		-- RAT BOY
+		if(self.mind == minds.ratboy) then
+			self.ai_tick = self.ai_tick + 1
+			if(self.ai_tick >= 150) then
+				vel = AimShot(self.x, self.y, ents[1].x, ents[1].y, 1.1)
+				projs:new(sprite_ids.enemy_bullet, self.x, self.y, vel[1], vel[2], true)
+				self.ai_tick = 0
+			end
+
+			self.ai_tick2 = self.ai_tick2 + 1
+			self.y_vel = math.sin(self.ai_tick2 / 30) * 6
+			self.x_vel = -0.5
+		end
 	end
 
 
@@ -302,11 +318,6 @@ function TIC()
 	-- clear the screen
 	cls(10)
 	shottick = shottick + 1
-	if(shottick >= 10) then
-		vel = AimShot(60, 60, ents[1].x, ents[1].y, 1.3)
-		projs:new(sprite_ids.enemy_bullet, 60, 60, vel[1], vel[2], true)
-		shottick = 0
-	end
 
 	for i, e in ipairs(ents) do
 		ents[i]:think()
